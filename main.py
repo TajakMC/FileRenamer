@@ -1,9 +1,9 @@
-from kivy.app import App
-from ui import FileRenamer
-
-class FileRenamerApp(App):
-    def build(self):
-        return FileRenamer()
+from ui import FileRenamerWindow
 
 if __name__ == '__main__':
-    FileRenamerApp().run()
+    import sys
+    from PySide6.QtWidgets import QApplication
+    app = QApplication(sys.argv)
+    window = FileRenamerWindow()
+    window.show()
+    sys.exit(app.exec())

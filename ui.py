@@ -1,34 +1,70 @@
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.textinput import TextInput
-from kivy.uix.button import Button
-from kivy.uix.label import Label
-from kivy.uix.filechooser import FileChooserListView
+from PySide6.QtWidgets import (
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QLineEdit, QFileDialog, QListWidget, QMessageBox
+)
+import sys
+import os
 from renamer import FileBatchRenamer
 
-class FileRenamer(BoxLayout):
-    def __init__(self, **kwargs):
-        super().__init__(orientation='vertical', **kwargs)
-        self.file_chooser = FileChooserListView(path='/', filters=['*.*'], multiselect=True)
-        self.add_widget(self.file_chooser)
+class FileRenamerWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle('파일 일괄 이름 변경기')
+        self.resize(600, 400)
+        layout = QVBoxLayout()
 
-        self.prefix_input = TextInput(hint_text='접두어(prefix)', size_hint_y=None, height=40)
-        self.add_widget(self.prefix_input)
-        self.suffix_input = TextInput(hint_text='접미어(suffix)', size_hint_y=None, height=40)
-        self.add_widget(self.suffix_input)
+        # 파일 리스트
+        self.file_list = QListWidget()
+        layout.addWidget(self.file_list)
 
-        self.rename_btn = Button(text='이름 일괄 변경', size_hint_y=None, height=50)
-        self.rename_btn.bind(on_press=self.rename_files)
-        self.add_widget(self.rename_btn)
+        # 파일 선택 버튼
+        btn_layout = QHBoxLayout()
+        self.select_btn = QPushButton('파일 선택')
+        self.select_btn.clicked.connect(self.select_files)
+        btn_layout.addWidget(self.select_btn)
+        layout.addLayout(btn_layout)
 
-        self.status_label = Label(text='', size_hint_y=None, height=40)
-        self.add_widget(self.status_label)
+        # 접두어/접미어 입력
+        prefix_layout = QHBoxLayout()
+        prefix_layout.addWidget(QLabel('접두어:'))
+        self.prefix_input = QLineEdit()
+        prefix_layout.addWidget(self.prefix_input)
+        layout.addLayout(prefix_layout)
 
-    def rename_files(self, instance):
-        prefix = self.prefix_input.text
-        suffix = self.suffix_input.text
-        files = self.file_chooser.selection
+        suffix_layout = QHBoxLayout()
+        suffix_layout.addWidget(QLabel('접미어:'))
+        self.suffix_input = QLineEdit()
+        suffix_layout.addWidget(self.suffix_input)
+        layout.addLayout(suffix_layout)
+
+        # 실행 버튼
+        self.rename_btn = QPushButton('이름 일괄 변경')
+        self.rename_btn.clicked.connect(self.rename_files)
+        layout.addWidget(self.rename_btn)
+
+        self.setLayout(layout)
+
+    def select_files(self):
+        files, _ = QFileDialog.getOpenFileNames(self, '파일 선택', '', '모든 파일 (*)')
+        if files:
+            self.file_list.clear()
+            self.file_list.addItems(files)
+
+    def rename_files(self):
+        files = [self.file_list.item(i).text() for i in range(self.file_list.count())]
+        prefix = self.prefix_input.text()
+        suffix = self.suffix_input.text()
         if not files:
-            self.status_label.text = '파일을 선택하세요.'
+            QMessageBox.warning(self, '경고', '파일을 선택하세요.')
             return
         success, msg = FileBatchRenamer.rename_files(files, prefix, suffix)
-        self.status_label.text = msg
+        if success:
+            QMessageBox.information(self, '완료', msg)
+            self.file_list.clear()
+        else:
+            QMessageBox.critical(self, '오류', msg)
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    window = FileRenamerWindow()
+    window.show()
+    sys.exit(app.exec())
