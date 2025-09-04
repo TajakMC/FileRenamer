@@ -49,6 +49,7 @@ class FileRenamerWindow(QWidget):
 
     self.setLayout(layout)
 
+
     def select_files(self):
         files, _ = QFileDialog.getOpenFileNames(self, '파일 선택', '', '모든 파일 (*)')
         if files:
