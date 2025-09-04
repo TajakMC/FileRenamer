@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QLineEdit, QFileDialog, QListWidget, QMessageBox
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QLineEdit, QFileDialog, QListWidget, QMessageBox, QCheckBox, QSpinBox
 )
 import sys
 import os
@@ -36,12 +36,33 @@ class FileRenamerWindow(QWidget):
         suffix_layout.addWidget(self.suffix_input)
         layout.addLayout(suffix_layout)
 
-        # 실행 버튼
-        self.rename_btn = QPushButton('이름 일괄 변경')
-        self.rename_btn.clicked.connect(self.rename_files)
-        layout.addWidget(self.rename_btn)
 
-        self.setLayout(layout)
+
+    # 일련번호 옵션
+    serial_layout = QHBoxLayout()
+    self.serial_checkbox = QCheckBox('일련번호 추가')
+    self.serial_checkbox.setChecked(False)
+    serial_layout.addWidget(self.serial_checkbox)
+    serial_layout.addWidget(QLabel('시작값:'))
+    self.serial_start = QSpinBox()
+    self.serial_start.setMinimum(1)
+    self.serial_start.setMaximum(99999)
+    self.serial_start.setValue(1)
+    serial_layout.addWidget(self.serial_start)
+    serial_layout.addWidget(QLabel('자릿수:'))
+    self.serial_digits = QSpinBox()
+    self.serial_digits.setMinimum(1)
+    self.serial_digits.setMaximum(6)
+    self.serial_digits.setValue(2)
+    serial_layout.addWidget(self.serial_digits)
+    layout.addLayout(serial_layout)
+
+    # 실행 버튼
+    self.rename_btn = QPushButton('이름 일괄 변경')
+    self.rename_btn.clicked.connect(self.rename_files)
+    layout.addWidget(self.rename_btn)
+
+    self.setLayout(layout)
 
     def select_files(self):
         files, _ = QFileDialog.getOpenFileNames(self, '파일 선택', '', '모든 파일 (*)')
@@ -53,10 +74,15 @@ class FileRenamerWindow(QWidget):
         files = [self.file_list.item(i).text() for i in range(self.file_list.count())]
         prefix = self.prefix_input.text()
         suffix = self.suffix_input.text()
+        use_serial = self.serial_checkbox.isChecked()
+        serial_start = self.serial_start.value()
+        serial_digits = self.serial_digits.value()
         if not files:
             QMessageBox.warning(self, '경고', '파일을 선택하세요.')
             return
-        success, msg = FileBatchRenamer.rename_files(files, prefix, suffix)
+        success, msg = FileBatchRenamer.rename_files(
+            files, prefix, suffix, use_serial, serial_start, serial_digits
+        )
         if success:
             QMessageBox.information(self, '완료', msg)
             self.file_list.clear()
