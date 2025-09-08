@@ -1,9 +1,7 @@
 from PySide6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QLineEdit, QFileDialog, QListWidget, QMessageBox, QCheckBox, QSpinBox
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QLineEdit, QFileDialog, QListWidget, QMessageBox, QCheckBox
 )
-import sys
 import os
-from renamer import FileBatchRenamer
 
 class FileRenamerWindow(QWidget):
     def __init__(self):
@@ -23,13 +21,14 @@ class FileRenamerWindow(QWidget):
         btn_layout.addWidget(self.select_btn)
         layout.addLayout(btn_layout)
 
-        # 접두어/접미어 입력
+        # 접두어 입력
         prefix_layout = QHBoxLayout()
         prefix_layout.addWidget(QLabel('접두어:'))
         self.prefix_input = QLineEdit()
         prefix_layout.addWidget(self.prefix_input)
         layout.addLayout(prefix_layout)
 
+        # 접미어 입력
         suffix_layout = QHBoxLayout()
         suffix_layout.addWidget(QLabel('접미어:'))
         self.suffix_input = QLineEdit()
@@ -59,23 +58,35 @@ class FileRenamerWindow(QWidget):
         prefix = self.prefix_input.text()
         suffix = self.suffix_input.text()
         keep_name = self.keep_name_checkbox.isChecked()
-        # 일련번호 토큰 파싱
-        use_serial = ('{OrderNo}' in prefix) or ('{OrderNo}' in suffix)
-        serial_start = 1
-        serial_digits = 2
-        # 파일명 변경 및 결과 목록 받기
-        success, msg, changed_files = FileBatchRenamer.rename_files(
-            files, prefix, suffix, use_serial, serial_start, serial_digits, keep_name
-        )
-        if success:
-            QMessageBox.information(self, '완료', msg)
-            if changed_files:
-                changed_list = '\n'.join([f"{old} -> {new}" for old, new in changed_files])
-                QMessageBox.information(self, '변경된 파일 목록', changed_list)
+
+        if not files:
+            QMessageBox.warning(self, "경고", "파일을 선택하세요.")
+            return
+
+        total_files = len(files)
+        order_width = len(str(total_files))  # 자리수 계산
+
+        renamed_files = []
+        for idx, file_path in enumerate(files, 1):
+            dir_name, base_name = os.path.split(file_path)
+            name, ext = os.path.splitext(base_name)
+            if keep_name:
+                new_name = f"{prefix}{name}{suffix}{ext}"
+            else:
+                new_name = f"{prefix}{suffix}{ext}"
+            if "{OrderNo}" in new_name:
+                order_str = str(idx).zfill(order_width)
+                new_name = new_name.replace("{OrderNo}", order_str)
+            new_path = os.path.join(dir_name, new_name)
+            try:
+                os.rename(file_path, new_path)
+                renamed_files.append(new_path)
+            except Exception as e:
+                QMessageBox.warning(self, "오류", f"파일 이름 변경 실패: {file_path}\n{e}")
+
+        # 변경된 파일 목록 보여주기
+        if renamed_files:
+            msg = "변경된 파일 목록:\n" + "\n".join(renamed_files)
+            QMessageBox.information(self, "완료", msg)
             self.file_list.clear()
-        else:
-            QMessageBox.critical(self, '오류', msg)
-
-            self.setLayout(layout)
-
-
+            self.file_list.addItems(renamed_files)
