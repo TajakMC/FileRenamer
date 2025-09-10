@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QLineEdit, QFileDialog, QListWidget, QMessageBox, QCheckBox
+    QWidget, QVBoxLayout, QFormLayout, QPushButton, QLabel, QLineEdit, QFileDialog, QListWidget, QMessageBox, QCheckBox, QHBoxLayout, QWidget, QApplication
 )
+
 import os
 
 class FileRenamerWindow(QWidget):
@@ -8,18 +9,17 @@ class FileRenamerWindow(QWidget):
         super().__init__()
         self.setWindowTitle('파일 일괄 이름 변경기')
         self.resize(600, 400)
+
+
         layout = QVBoxLayout()
 
-        # 파일 리스트
         self.file_list = QListWidget()
         layout.addWidget(self.file_list)
 
-        # 파일 선택 버튼
         btn_layout = QHBoxLayout()
         self.select_btn = QPushButton('파일 선택')
         self.select_btn.clicked.connect(self.select_files)
-        btn_layout.addWidget(self.select_btn)
-        layout.addLayout(btn_layout)
+        layout.addWidget(self.select_btn)
 
         # 접두어 입력
         prefix_layout = QHBoxLayout()
@@ -45,6 +45,9 @@ class FileRenamerWindow(QWidget):
         self.rename_btn.clicked.connect(self.rename_files)
         layout.addWidget(self.rename_btn)
 
+
+        layout.addLayout(btn_layout)
+
         self.setLayout(layout)
 
     def select_files(self):
@@ -58,7 +61,7 @@ class FileRenamerWindow(QWidget):
         prefix = self.prefix_input.text()
         suffix = self.suffix_input.text()
         keep_name = self.keep_name_checkbox.isChecked()
-
+    
         if not files:
             QMessageBox.warning(self, "경고", "파일을 선택하세요.")
             return
@@ -90,3 +93,27 @@ class FileRenamerWindow(QWidget):
             QMessageBox.information(self, "완료", msg)
             self.file_list.clear()
             self.file_list.addItems(renamed_files)
+
+
+    def apply_stylesheet(self):
+
+        self.setStyleSheet("""
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                padding: 10px;
+                font-size: 16px;
+            }
+            QLineEdit {
+                border: 1px solid #ccc;
+                padding: 8px;
+                font-size: 14px;
+            }
+            QListWidget {
+                border: 2px dashed blue !important;
+            }
+        """)
+        self.apply_stylesheet()
+
+        self.apply_stylesheet()
