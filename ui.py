@@ -9,7 +9,7 @@ class FileRenamerWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('파일 일괄 이름 변경기')
-        self.resize(600, 450)
+        self.resize(650, 500)
 
         # 메인 레이아웃
         main_layout = QVBoxLayout(self)
