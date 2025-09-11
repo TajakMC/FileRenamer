@@ -1,54 +1,51 @@
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QFormLayout, QPushButton, QLabel, QLineEdit, QFileDialog, QListWidget, QMessageBox, QCheckBox, QHBoxLayout, QWidget, QApplication
+    QWidget, QVBoxLayout, QFormLayout, QPushButton, QLabel, QLineEdit, QFileDialog, QListWidget, QMessageBox, QCheckBox
 )
-
+from PySide6.QtCore import Qt
 import os
+from renamer import FileBatchRenamer
 
 class FileRenamerWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('파일 일괄 이름 변경기')
-        self.resize(600, 400)
+        self.resize(600, 450)
 
+        # 메인 레이아웃
+        main_layout = QVBoxLayout(self)
 
-        layout = QVBoxLayout()
-
+        # 1. 파일 목록
         self.file_list = QListWidget()
-        layout.addWidget(self.file_list)
+        main_layout.addWidget(self.file_list)
 
-        btn_layout = QHBoxLayout()
+        # 2. 파일 선택 버튼
         self.select_btn = QPushButton('파일 선택')
         self.select_btn.clicked.connect(self.select_files)
-        layout.addWidget(self.select_btn)
+        main_layout.addWidget(self.select_btn)
 
-        # 접두어 입력
-        prefix_layout = QHBoxLayout()
-        prefix_layout.addWidget(QLabel('접두어:'))
+        # 3. 옵션 입력 (Form Layout)
+        form_layout = QFormLayout()
         self.prefix_input = QLineEdit()
-        prefix_layout.addWidget(self.prefix_input)
-        layout.addLayout(prefix_layout)
+        self.prefix_input.setPlaceholderText('예: IMG_')
+        form_layout.addRow('접두어:', self.prefix_input)
 
-        # 접미어 입력
-        suffix_layout = QHBoxLayout()
-        suffix_layout.addWidget(QLabel('접미어:'))
         self.suffix_input = QLineEdit()
-        suffix_layout.addWidget(self.suffix_input)
-        layout.addLayout(suffix_layout)
+        self.suffix_input.setPlaceholderText('예: _edited 또는 _{OrderNo}')
+        form_layout.addRow('접미어:', self.suffix_input)
 
-        # 기존 이름 유지 여부 체크박스
         self.keep_name_checkbox = QCheckBox('기존 파일명 유지')
         self.keep_name_checkbox.setChecked(True)
-        layout.addWidget(self.keep_name_checkbox)
+        form_layout.addRow(self.keep_name_checkbox)
 
-        # 실행 버튼
+        main_layout.addLayout(form_layout)
+
+        # 4. 실행 버튼
         self.rename_btn = QPushButton('이름 일괄 변경')
         self.rename_btn.clicked.connect(self.rename_files)
-        layout.addWidget(self.rename_btn)
+        main_layout.addWidget(self.rename_btn)
 
-
-        layout.addLayout(btn_layout)
-
-        self.setLayout(layout)
+        # 스타일시트 적용
+        self.apply_stylesheet()
 
     def select_files(self):
         files, _ = QFileDialog.getOpenFileNames(self, '파일 선택', '', '모든 파일 (*)')
@@ -58,63 +55,70 @@ class FileRenamerWindow(QWidget):
 
     def rename_files(self):
         files = [self.file_list.item(i).text() for i in range(self.file_list.count())]
-        prefix = self.prefix_input.text()
-        suffix = self.suffix_input.text()
-        keep_name = self.keep_name_checkbox.isChecked()
-    
         if not files:
             QMessageBox.warning(self, "경고", "파일을 선택하세요.")
             return
 
-        total_files = len(files)
-        order_width = len(str(total_files))  # 자리수 계산
+        prefix = self.prefix_input.text()
+        suffix = self.suffix_input.text()
+        keep_name = self.keep_name_checkbox.isChecked()
 
-        renamed_files = []
-        for idx, file_path in enumerate(files, 1):
-            dir_name, base_name = os.path.split(file_path)
-            name, ext = os.path.splitext(base_name)
-            if keep_name:
-                new_name = f"{prefix}{name}{suffix}{ext}"
-            else:
-                new_name = f"{prefix}{suffix}{ext}"
-            if "{OrderNo}" in new_name:
-                order_str = str(idx).zfill(order_width)
-                new_name = new_name.replace("{OrderNo}", order_str)
-            new_path = os.path.join(dir_name, new_name)
-            try:
-                os.rename(file_path, new_path)
-                renamed_files.append(new_path)
-            except Exception as e:
-                QMessageBox.warning(self, "오류", f"파일 이름 변경 실패: {file_path}\n{e}")
+        # renamer.py의 클래스를 사용하여 파일 이름 변경
+        # '{OrderNo}'가 있으면 일련번호를 사용하도록 renamer.py가 처리함
+        use_serial = '{OrderNo}' in prefix or '{OrderNo}' in suffix
 
-        # 변경된 파일 목록 보여주기
-        if renamed_files:
-            msg = "변경 완료!"
-            #msg = "변경된 파일 목록:\n" + "\n".join(renamed_files)
-            QMessageBox.information(self, "완료", msg)
+        success, message, changed_files_info = FileBatchRenamer.rename_files(
+            files, prefix, suffix, use_serial=use_serial, keep_name=keep_name
+        )
+
+        if success:
+            # 성공 시, 변경된 파일 경로 목록으로 리스트를 새로고침
+            if changed_files_info:
+                # 원본 파일 경로에서 디렉토리 경로를 가져와 새 파일명과 조합
+                dir_name = os.path.dirname(files[0])
+                renamed_paths = [os.path.join(dir_name, new_name) for _, new_name in changed_files_info]
+                self.file_list.clear()
+                self.file_list.addItems(renamed_paths)
+            else: # 변경된 파일이 없는 경우 (예: 입력값이 없어 이름이 그대로인 경우)
+                self.file_list.clear()
+                self.file_list.addItems(files) # 기존 파일 목록 유지
+        else:
+            # 실패 시 오류 메시지 표시
+            QMessageBox.critical(self, "오류", message)
+            # 실패 시 목록을 원래대로 복원
             self.file_list.clear()
-            self.file_list.addItems(renamed_files)
-
+            self.file_list.addItems(files)
 
     def apply_stylesheet(self):
-
         self.setStyleSheet("""
+            QWidget {
+                background-color: #f0f0f0;
+                font-size: 14px;
+            }
+            QListWidget {
+                border: 2px dashed #0078d7;
+                background-color: white;
+                padding: 5px;
+            }
             QPushButton {
-                background-color: #4CAF50;
+                background-color: #0078d7;
                 color: white;
                 border: none;
                 padding: 10px;
-                font-size: 16px;
+                font-size: 15px;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #005a9e;
             }
             QLineEdit {
                 border: 1px solid #ccc;
                 padding: 8px;
                 font-size: 14px;
+                border-radius: 5px;
             }
-            QListWidget {
-                border: 2px dashed blue !important;
+            QLabel {
+                font-size: 14px;
+                padding-top: 8px;
             }
         """)
-        self.apply_stylesheet()
-
-        self.apply_stylesheet()
