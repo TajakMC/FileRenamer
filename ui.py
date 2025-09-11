@@ -89,7 +89,8 @@ class FileRenamerWindow(QWidget):
 
         # 변경된 파일 목록 보여주기
         if renamed_files:
-            msg = "변경된 파일 목록:\n" + "\n".join(renamed_files)
+            msg = "변경 완료!"
+            #msg = "변경된 파일 목록:\n" + "\n".join(renamed_files)
             QMessageBox.information(self, "완료", msg)
             self.file_list.clear()
             self.file_list.addItems(renamed_files)
