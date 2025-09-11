@@ -35,7 +35,7 @@ class FileRenamerWindow(QWidget):
 
         self.keep_name_checkbox = QCheckBox('기존 파일명 유지')
         self.keep_name_checkbox.setChecked(True)
-        form_layout.addRow(self.keep_name_checkbox)
+        form_layout.addRow('', self.keep_name_checkbox)
 
         main_layout.addLayout(form_layout)
 
@@ -120,5 +120,19 @@ class FileRenamerWindow(QWidget):
             QLabel {
                 font-size: 14px;
                 padding-top: 8px;
+            }
+            QCheckBox::indicator {
+                width: 16px;
+                height: 16px;
+                border: 2px solid #999;
+                border-radius: 4px;
+                background-color: white;
+            }
+            QCheckBox::indicator:hover {
+                border-color: #0078d7;
+            }
+            QCheckBox::indicator:checked {
+                background-color: #555;
+                border-color: #333;
             }
         """)
